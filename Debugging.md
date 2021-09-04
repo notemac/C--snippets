@@ -1,4 +1,4 @@
-##  [Reserved attributes: Determine caller information](https://ptgmedia.pearsoncmg.com/imprint_downloads/microsoftpress/bookreg/9781509306978/9781509306978_thedefinitiveguidetodax2e_demos.zip)
+##  [Reserved attributes: Determine caller information](https://docs.microsoft.com/en-us/dotnet/csharp/language-reference/attributes/caller-information)
 ```C#
 public void DoProcessing()
 {
