@@ -55,7 +55,7 @@ namespace ConsoleApp1
                 );
             }
             Task.WaitAll(tasks.ToArray());
-            WriteLine($"Distinct connections {conId.Distinct().Count()}");
+            WriteLine($"Distinct connections {conId.Count}");
         }
     }
 }
@@ -88,5 +88,20 @@ Distinct connections 100
 На 101 итерации цикла пул заполнен и свободные подключения отсутствуют, поэтому 101 запрос на подключение к DBMS помещается в очередь. Время ожидания в очереди задается параметром ConnectTimeout в секундах (```ConnectTimeout=60```). Т.к. задержка перед закрытием соединений всего лишь 5 секунд, то таски из первых 100 потоков успевают завершить свою работу в течение 60 секунд и соответствующие соединения отправляются в пул. Поэтому начиная со 101 итерации новые подключения не создаются, а берутся из пула.
 
 В итоге в консоли мы видим, что было создано 100 разных подключений, что эквивалентно размеру пула.
+
+Если дожидаться завершения каждого потока (```await Task.Run()```), то будет создано только одно соединение в пуле, которое и будет использоваться в каждом потоке:
+```
+Connection opened 0 34259171-710d-4b78-9837-04181cd76923. From pool: False.  ManagedThreadId: 5. 1439 ms elapsed.
+Connection opened 1 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 4. 1525 ms elapsed.
+Connection opened 2 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 4. 1586 ms elapsed.
+Connection opened 3 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 4. 1648 ms elapsed.
+Connection opened 4 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 4. 1710 ms elapsed.
+...
+Connection opened 196 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 6. 13740 ms elapsed.
+Connection opened 197 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 4. 13803 ms elapsed.
+Connection opened 198 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 6. 13865 ms elapsed.
+Connection opened 199 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 6. 13927 ms elapsed.
+Distinct connections 1
+```
 
 If the maximum pool size has been reached and no usable connection is available, the request is queued. The pooler then tries to reclaim any connections until the time-out is reached (the default is 15 seconds). If the pooler cannot satisfy the request before the connection times out, an exception is thrown.
