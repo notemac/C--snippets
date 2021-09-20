@@ -1,4 +1,4 @@
-### Пример 1
+### Пример 1. SQL Server Connection Pooling (ADO.NET)
 ```C#
 using System;
 using System.Collections.Generic;
