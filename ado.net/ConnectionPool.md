@@ -85,7 +85,7 @@ Distinct connections 100
 
 На последующих итерациях цикла выполняются аналогичные действия. Обратите внимание, мы не ожидаем сразу же завершения очередного созданного потока (```Task.Run()```), поэтому новые подключения создаются очень быстро один за другим, а пауза в 5 секунд перед "закрытием" соединения (= перед помещением соединения в пул) позволяет отсрочить добавление очередного соединения в пул. Поэтому в консоли мы видим создание новых первых 100 подключений, которые заполняют пул.
 
-На 101 итерации цикла пул заполнен и свободные подключения отсутствуют, поэтому 101 запрос на подключение к DBMS помещается в очередь. Время ожидания в очереди задается параметром ConnectTimeout в секундах (```ConnectTimeout=60```). Т.к. задержка перед закрытием соединений всего лишь 5 секунд, то таски из первых 100 потоков успевают завершить свою работу в течение 60 секунд и соответствующие соединения отправляются в пул. Поэтому начиная со 101 итерации новые подключения не создаются, а берутся из пула.
+На 101 итерации цикла пул заполнен и свободные подключения отсутствуют, поэтому 101 запрос на подключение к DBMS помещается в очередь. Время ожидания в очереди задается параметром ConnectTimeout в секундах (```ConnectTimeout=60```). Т.к. задержка перед закрытием соединений всего лишь 5 секунд, то первые 100 тасков успевают завершить свою работу в течение 60 секунд и соответствующие соединения отправляются в пул. Поэтому начиная со 101 итерации новые подключения не создаются, а берутся из пула.
 
 В итоге в консоли мы видим, что было создано 100 разных подключений, что эквивалентно размеру пула.
 
@@ -103,5 +103,23 @@ Connection opened 198 34259171-710d-4b78-9837-04181cd76923. From pool: True.  Ma
 Connection opened 199 34259171-710d-4b78-9837-04181cd76923. From pool: True.  ManagedThreadId: 6. 13927 ms elapsed.
 Distinct connections 1
 ```
+Теперь уменьшим время ожидания покдлючения до 15 секунд (```ConnectTimeout=15```). С большой вероятностью возникнут ошибки:
+```
+...
+Connection opened 98 1bb2e420-6dcc-4714-9ea6-dc0abe61892e. From pool: False.  ManagedThreadId: 6. 25441 ms elapsed.
+Connection opened 99 c74fb478-0cea-4717-893a-425da185d407. From pool: False.  ManagedThreadId: 32. 26015 ms elapsed.
+Connection opened 100 a9123b12-c21e-4d71-882a-4ace2b887508. From pool: True.  ManagedThreadId: 35. 26018 ms elapsed.
+Connection opened 101 c9229e78-6b41-4538-acfd-1f05eccce2c7. From pool: True.  ManagedThreadId: 27. 26030 ms elapsed.
+Connection opened 102 fc1282f5-02f8-4a68-8e82-5d60c2a9f666. From pool: True.  ManagedThreadId: 18. 26045 ms elapsed.
+...
+Connection opened 122 3a39a96c-1103-4e4e-ad77-8d9531ca988d. From pool: True.  ManagedThreadId: 22. 30053 ms elapsed.
+Connection opened 123 62622b41-c11b-4139-bea3-d2a1cad8b49a. From pool: True.  ManagedThreadId: 5. 30442 ms elapsed.
+Connection opened 124 2a5d6d58-bdc9-432e-9eb8-25b1eb5ce488. From pool: True.  ManagedThreadId: 7. 30458 ms elapsed.
+Unhandled exception. System.AggregateException: One or more errors occurred. (Timeout expired.  The timeout period elapsed prior to obtaining a connection from the pool.  This may have occurred because all pooled connections were in use and max pool size was reached.) (Timeout expired.  The timeout period elapsed prior to obtaining a connection from the pool.  This may have occurred because all pooled connections were in use and max pool size was reached.) (Timeout expired.  The timeout period elapsed prior to obtaining a connection from the pool.  This may have occurred because all pooled connections were in use and max pool size was reached.) (Timeout expired.  The timeout period elapsed prior to obtaining a connection from the pool.  This may have occurred because all pooled connections were in use and max pool size was reached.)
+...
+```
+Мой ноутбук имеет 2 физических ядра, т.е. реально параллельно могут выполняться только 2 потока. Каждому из 200 тасков выделяется определенный квант процессерного времени, т.е. во время выполнения программы происходит постоянное переключение между потоками, что сказывается на времени выполнения каждого таска. В итоге некоторые из первых 100 тасков не успевают завершиться за 15 секунд, поэтому для некоторых последующих запросов на подключение к DBMS отсутствуют свободные соединения в пуле и через 15 сек бросаются исключение из-за превышения времени ожидания подключения.
+
+**Необходимо уточнить, что при выполнении данного сниппета на моем ноутбуке на самом деле будет создаваться всего лишь несколько десятков потоков, т.к. потоки берутся и создаются в Thread Pool'e, которым управляет OS согласно зашитым в нее алгоритмам.**
 
 If the maximum pool size has been reached and no usable connection is available, the request is queued. The pooler then tries to reclaim any connections until the time-out is reached (the default is 15 seconds). If the pooler cannot satisfy the request before the connection times out, an exception is thrown.
