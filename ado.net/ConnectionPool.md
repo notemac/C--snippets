@@ -120,6 +120,49 @@ Unhandled exception. System.AggregateException: One or more errors occurred. (Ti
 ```
 Мой ноутбук имеет 2 физических ядра, т.е. реально параллельно могут выполняться только 2 потока. Каждому из 200 тасков выделяется определенный квант процессерного времени, т.е. во время выполнения программы происходит постоянное переключение между потоками, что сказывается на времени выполнения каждого таска. В итоге некоторые из первых 100 тасков не успевают завершиться за 15 секунд, поэтому для некоторых последующих запросов на подключение к DBMS отсутствуют свободные соединения в пуле и через 15 сек бросаются исключение из-за превышения времени ожидания подключения.
 
-**Необходимо уточнить, что при выполнении данного сниппета на моем ноутбуке на самом деле будет создаваться всего лишь несколько десятков потоков, т.к. потоки берутся и создаются в Thread Pool'e, которым управляет OS согласно зашитым в нее алгоритмам.**
+**Необходимо уточнить, что при выполнении данного сниппета на самом деле будет создаваться только несколько десятков потоков, т.к. потоки берутся и создаются в Thread Pool'e, которым управляет OS согласно зашитым в нее алгоритмам.**
 
-If the maximum pool size has been reached and no usable connection is available, the request is queued. The pooler then tries to reclaim any connections until the time-out is reached (the default is 15 seconds). If the pooler cannot satisfy the request before the connection times out, an exception is thrown.
+### Пример 2. Removing Connections
+При настройке строки подключения по умолчанию каждое соединение с DBMS из пула соединений удаляется примерно через 4-8 минут.
+```C#
+using System.Threading;
+using Microsoft.Data.SqlClient;
+
+namespace ConsoleApp1
+{
+    class Program
+    {
+        static void Main(string[] args)  
+        {
+            string connectionString = new SqlConnectionStringBuilder
+            {
+                ApplicationName = "ConsoleApp1",
+                DataSource = "localhost",
+                InitialCatalog = "test1",
+                IntegratedSecurity = true
+            }.ConnectionString;
+
+            using (var con = new SqlConnection(connectionString))
+            {
+                con.Open();
+            }
+            Thread.Sleep(600_000);
+        }
+    }
+}
+
+```
+Через 4-8 минут можем увидеть, например, с помощью SQL-скрипта, что подключение удалено. Хотя консольное приложение еще работает, ожидания завершения ```Thread.Sleep(600_000)```.
+```SQL
+select * 
+from 
+	sys.dm_exec_connections
+where 
+	session_id in (
+		select session_id 
+		from 
+			sys.dm_exec_sessions 
+		where 
+			program_name = 'ConsoleApp1'
+	)
+```
