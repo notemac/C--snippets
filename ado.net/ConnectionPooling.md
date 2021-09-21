@@ -60,7 +60,7 @@ namespace ConsoleApp1
     }
 }
 ```
-### Output:
+#### Output:
 ```
 ...
 Connection opened 99 c850d380-925d-435d-9ad2-98b0a0b0bd0a. From pool: False.  ManagedThreadId: 26. 27038 ms elapsed.
@@ -123,7 +123,7 @@ Unhandled exception. System.AggregateException: One or more errors occurred. (Ti
 **Необходимо уточнить, что при выполнении данного сниппета на самом деле будет создаваться только несколько десятков потоков, т.к. потоки берутся и создаются в Thread Pool'e, которым управляет OS согласно зашитым в нее алгоритмам.**
 
 ### Пример 2. Removing Connections
-При настройке строки подключения по умолчанию каждое соединение с DBMS из пула соединений удаляется примерно через 4-8 минут.
+При настройке строки подключения по умолчанию каждое соединение с DBMS из пула соединений удаляется примерно через 4-8 минут в случае неактивности.
 ```C#
 using System.Threading;
 using Microsoft.Data.SqlClient;
@@ -166,6 +166,9 @@ where
 			program_name = 'ConsoleApp1'
 	)
 ```
-## Links
+### MinPoolSize
+Если пул пустой и создается новое соединение с параметром ```MinPoolSize```, то в пул будет добавлено ``MinPoolSize``` аналогичных соединений, которые не будут удаляться из пула по истечении 4-8 минут в случае неактивности, т.е. будут доступны, пока процесс приложения не завершит свою работу.
+### Links
 [SQL Server Connection Pooling (ADO.NET)](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-connection-pooling)\
 [SqlConnection.ConnectionString Property](https://docs.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring?view=dotnet-plat-ext-5.0)
+
