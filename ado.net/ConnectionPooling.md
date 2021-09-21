@@ -252,6 +252,6 @@ namespace ConsoleApp1
 ### Links
 [SQL Server Connection Pooling (ADO.NET)](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-connection-pooling)\
 [SqlConnection.ConnectionString Property](https://docs.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring?view=dotnet-plat-ext-5.0)\
-[Swimming in the .NET Connection Pool](https://www.itprotoday.com/net/swimming-net-connection-pool)
+[Swimming in the .NET Connection Pool](https://www.itprotoday.com/net/swimming-net-connection-pool)\
 [Why Does a Connection Pool Overflow?](https://docs.microsoft.com/en-us/previous-versions/sql/legacy/aa175863(v=sql.80))
 
