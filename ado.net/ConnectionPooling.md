@@ -211,6 +211,44 @@ d1cf5711-1fd8-41c2-ba05-66719782430d
 cd3c320d-d94b-4270-a14a-41f838836109
 ```
 Когда первый блок ```using (var con = new SqlConnection(connectionString))``` завершает свою работу, то созданное соединение помещается в пул, но с момента создания соединения прошло более 5 секунд благодаря ```Thread.Sleep(7000)```, поэтому данное подключение в пул не помещается. В результате работы программы создается два разных подключения. Второе соединение ```cd3c320d-d94b-4270-a14a-41f838836109``` будет помещено в пул и далее каждый раз при возвращении его в пул снова будет сравниваться время создания соединения с текущим временем, и если прошло более 5 секунд с момента создания, то данное соединение удаляется из пула (также удаляется, если соединение при нахождении в пуле было неактивным в течение 4-8 минут).
+### MinPoolSize && LoadBalanceTimeout
+В программе ниже только одно подключение останется в пуле после завершения первого блока ```using (var con = new SqlConnection(connectionString))```, т.к. срабатывает правило для LoadBalanceTimeout. Но далее создается **новое** подключение с аналогичными параметрами, поскольку ```MinPoolSize=2```.
+```C#
+using System.Threading;
+using Microsoft.Data.SqlClient;
+using static System.Console;
+
+namespace ConsoleApp1
+{
+    class Program
+    {
+        static void Main(string[] args)  
+        {
+            string connectionString = new SqlConnectionStringBuilder
+            {
+                ApplicationName = "ConsoleApp1"
+                , DataSource = "localhost"
+                , InitialCatalog = "test1"
+                , IntegratedSecurity = true
+                , LoadBalanceTimeout = 5
+                , MinPoolSize = 2
+            }.ConnectionString;
+
+            using (var con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                Thread.Sleep(7000);
+                WriteLine(con.ClientConnectionId);
+            }
+            using (var con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                WriteLine(con.ClientConnectionId);
+            }
+        }
+    }
+}
+```
 ### Links
 [SQL Server Connection Pooling (ADO.NET)](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-connection-pooling)\
 [SqlConnection.ConnectionString Property](https://docs.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring?view=dotnet-plat-ext-5.0)
