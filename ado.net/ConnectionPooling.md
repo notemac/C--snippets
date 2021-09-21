@@ -167,7 +167,50 @@ where
 	)
 ```
 ### MinPoolSize
-Если пул пустой и создается новое соединение с параметром ```MinPoolSize```, то в пул будет добавлено ``MinPoolSize``` аналогичных соединений, которые не будут удаляться из пула по истечении 4-8 минут в случае неактивности, т.е. будут доступны, пока процесс приложения не завершит свою работу.
+Если пул пустой и создается новое соединение с параметром ```MinPoolSize```, то в пул будет добавлено ```MinPoolSize``` аналогичных соединений, которые не будут удаляться из пула по истечении 4-8 минут в случае неактивности, т.е. будут доступны, пока процесс приложения не завершит свою работу.
+### LoadBalanceTimeout
+When a connection is returned to the pool, its creation time is compared with the current time, and the connection is destroyed if that time span (in seconds) exceeds the value specified by Connection Lifetime. This is useful in clustered configurations to force load balancing between a running server and a server just brought online.
+```C#
+using System.Threading;
+using Microsoft.Data.SqlClient;
+using static System.Console;
+
+namespace ConsoleApp1
+{
+    class Program
+    {
+        static void Main(string[] args)  
+        {
+            string connectionString = new SqlConnectionStringBuilder
+            {
+                ApplicationName = "ConsoleApp1"
+                , DataSource = "localhost"
+                , InitialCatalog = "test1"
+                , IntegratedSecurity = true
+                , LoadBalanceTimeout = 5
+            }.ConnectionString;
+
+            using (var con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                Thread.Sleep(7000);
+                WriteLine(con.ClientConnectionId);
+            }
+            using (var con = new SqlConnection(connectionString))
+            {
+                con.Open();
+                WriteLine(con.ClientConnectionId);
+            }
+        }
+    }
+}
+```
+#### Output:
+```
+d1cf5711-1fd8-41c2-ba05-66719782430d
+cd3c320d-d94b-4270-a14a-41f838836109
+```
+Когда первый блок ```using (var con = new SqlConnection(connectionString))``` завершает свою работу, созданное соединение помещается в пул, но с момента создания соединения прошло более 5 секунд благодаря ```Thread.Sleep(7000)```, поэтому данное подключение в пул не помещается. В результате работы программы создается два разных подключения. Второе соединение ```cd3c320d-d94b-4270-a14a-41f838836109``` будет помещено в пул и далее каждый раз при возвращении его в пул снова будет сравниваться время создания соединения с текущим временем, и если прошло более 5 секунд с момента создания, то данное соединение удаляется из пула.
 ### Links
 [SQL Server Connection Pooling (ADO.NET)](https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/sql-server-connection-pooling)\
 [SqlConnection.ConnectionString Property](https://docs.microsoft.com/en-us/dotnet/api/system.data.sqlclient.sqlconnection.connectionstring?view=dotnet-plat-ext-5.0)
